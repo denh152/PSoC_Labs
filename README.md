@@ -9,6 +9,7 @@ a `.gitignore` that keeps build artifacts out of the repository.
 | Folder | Topic | Report |
 |--------|-------|--------|
 | [`lab01_Hutsul`](lab01_Hutsul/) | Clock tree configuration and interrupt service routines (ISR) in PSoC 4 | [README](lab01_Hutsul/README.md) |
+| [`lab02_Hutsul`](lab02_Hutsul/) | Asynchronous serial communication over UART (SCB): command-line console, Saleae Logic measurements | [README](lab02_Hutsul/README.md) |
 
 ## Hardware
 
