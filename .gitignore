@@ -1,0 +1,7 @@
+# Word / PDF reports are not stored in the repository
+*.docx
+*.pdf
+
+# OS clutter
+Thumbs.db
+desktop.ini
