@@ -1,6 +1,8 @@
-# Word / PDF reports are not stored in the repository
+# Word / PDF files are not stored in the repository,
+# except the final lab reports exported to PDF (labNN_Hutsul/LabN_Hutsul_report.pdf)
 *.docx
 *.pdf
+!lab*_Hutsul/Lab*_Hutsul_report.pdf
 
 # OS clutter
 Thumbs.db

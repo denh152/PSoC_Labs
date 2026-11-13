@@ -3,7 +3,8 @@
 **Student:** Denys Hutsul, 4th year, Computer Engineering  
 **Variant:** 5  
 **Board:** CY8CKIT-042 PSoC 4 Pioneer Kit (CY8C4245AXI-483)  
-**IDE:** PSoC Creator 4.4
+**IDE:** PSoC Creator 4.4  
+**Full report (PDF, Ukrainian):** [Lab1_Hutsul_report.pdf](Lab1_Hutsul_report.pdf)
 
 ## Goal
 
@@ -25,6 +26,7 @@ lab01_Hutsul/
 │   └── lab1.cydsn/   lab1.cyprj, lab1.cydwr, TopDesign/TopDesign.cysch, main.c
 ├── task2/            PSoC Creator workspace: push button interrupt toggling the LED (task 4)
 ├── images/           screenshots used in this report
+├── Lab1_Hutsul_report.pdf   full lab report submitted to the teacher (Ukrainian)
 ├── .gitignore        build output and generated code are not committed
 └── README.md         this report
 ```
