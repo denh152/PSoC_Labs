@@ -3,7 +3,8 @@
 **Student:** Denys Hutsul, 4th year, Computer Engineering  
 **Variant:** 5 (19200 bit/s, 8N1, new command `bin <n>`)  
 **Board:** CY8CKIT-042 PSoC 4 Pioneer Kit (CY8C4245AXI-483)  
-**IDE:** PSoC Creator 4.4
+**IDE:** PSoC Creator 4.4  
+**Full report (PDF, Ukrainian):** [Lab2_Hutsul_report.pdf](Lab2_Hutsul_report.pdf)
 
 ## Goal
 
@@ -28,6 +29,7 @@ lab02_Hutsul/
 │   ├── lab2.cywrk
 │   └── lab2.cydsn/   lab2.cyprj, lab2.cydwr, TopDesign/TopDesign.cysch, main.c
 ├── images/           screenshots used in this report
+├── Lab2_Hutsul_report.pdf   full lab report submitted to the teacher (Ukrainian)
 ├── .gitignore        build output and generated code are not committed
 └── README.md         this report
 ```
