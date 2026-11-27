@@ -36,13 +36,15 @@ lab02_Hutsul/
 
 1. Open `taskN/lab2.cywrk` in PSoC Creator 4.4 and press **Build → Build lab2** (`Shift+F6`).
 2. Connect the CY8CKIT-042 kit over USB and press **Debug → Program** (`Ctrl+F5`).
-   Make sure the SW4 switches route P4[0]/P4[1] to the KitProg USB-UART bridge.
+   On the CY8CKIT-042 the KitProg USB-UART bridge is **not** routed to the PSoC 4 on the PCB:
+   connect it with two jumper wires, `J8_10` (KitProg TX) → `J3_10` (P4[0], PSoC RX) and
+   `J8_9` (KitProg RX) → `J3_09` (P4[1], PSoC TX).
 3. Find the *KitProg USB-UART* COM port in Device Manager and open a terminal
    (Tera Term / PuTTY): **115200** for task1/task2 or **19200** for task3, 8 data bits, no parity,
    1 stop bit, no flow control, Enter sends CR, local echo off (the board echoes the characters).
 4. Press the reset button: the board prints `=== Lab_2 UART console ===`, then type `help`.
 5. For the measurements connect the Saleae Logic analyzer: D4 → P4_1 (TX of the PSoC),
-   D5 → P4_0 (RX of the PSoC), D6 → P0_2 (red LED), D7 → P0_3 (green LED), GND → GND.
+   D5 → P4_0 (RX of the PSoC), D6 → P0_2 (`Pin_LED_R`), D7 → P0_3 (`Pin_LED_G`), GND → GND.
 
 ---
 
@@ -104,11 +106,17 @@ HW connection disabled.
 
 | Signal | Port | Pin | Purpose |
 |--------|:----:|:---:|---------|
-| `\UART_1:rx\` | P4[0] | 20 | RX of the PSoC (TX of KitProg) |
-| `\UART_1:tx\` | P4[1] | 21 | TX of the PSoC (RX of KitProg) |
-| `Pin_LED_R` | P0[2] | 26 | red LED |
-| `Pin_LED_G` | P0[3] | 27 | green LED |
-| `Pin_LED_B` | P1[6] | 43 | blue LED |
+| `\UART_1:rx\` | P4[0] | 20 | RX of the PSoC ← `J8_10` (TX of KitProg) |
+| `\UART_1:tx\` | P4[1] | 21 | TX of the PSoC → `J8_9` (RX of KitProg) |
+| `Pin_LED_R` | P0[2] | 26 | channel R (physically the green LED) |
+| `Pin_LED_G` | P0[3] | 27 | channel G (physically the blue LED) |
+| `Pin_LED_B` | P1[6] | 43 | channel B (physically the red LED) |
+
+P4[0]/P4[1] are brought out to the Arduino header J3 (`J3_10`, `J3_09`). On the CY8CKIT-042 they are
+not connected to the KitProg on the PCB: the UART lines of the PSoC 5LP (KitProg) are on header J8
+(`J8_9` = P12[6] RX, `J8_10` = P12[7] TX), so two jumper wires are required.
+The LED pins follow the assignment, but on the kit P0[2] drives the green, P0[3] the blue and P1[6] the red
+die of the RGB LED, so `led r` physically lights green, `led g` blue and `led b` red.
 
 ![Pins tab](images/cydwr_pins.png)
 
@@ -168,7 +176,7 @@ Expected terminal session:
 > led all off         OK
 > led x on            ERR usage: led <r|g|b|all> <on|off|toggle>   (unknown LED name)
 > led r               ERR usage: led <r|g|b|all> <on|off|toggle>   (argc = 2, 3 tokens required)
-> blink g 500         OK   (green LED toggles every 500 ms, period 1 s)
+> blink g 500         OK   (channel G LED toggles every 500 ms, period 1 s)
 > blink g off         OK
 > blink g 5           ERR usage: blink <r|g|b> <10..60000 ms|off>  (below the 10 ms limit)
 > stats               rx bytes: N / cmd ok: 7 / cmd err: 4 / line overflow: 0
