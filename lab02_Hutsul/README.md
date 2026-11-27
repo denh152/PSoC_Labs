@@ -9,26 +9,26 @@
 ## Goal
 
 Learn the principles of asynchronous serial communication (UART) and the configuration of the SCB block
-in PSoC Creator, build a command-line console on top of the UART, and verify the timing of the signals
-(bit duration, response latency) with the Saleae Logic analyzer.
+in PSoC Creator, learn to send and receive frames and check their integrity, and measure the timing
+of the signals with the Saleae Logic analyzer.
 
 ## Variant data
 
 | Part of the work | IMO | Baud rate | Frame | Commands |
 |:-----------------|:---:|:---------:|:-----:|:---------|
-| Base part (steps 1–10) | 24 MHz | 115200 | 8N1 | `echo`, `led`, `stats`, `blink` |
+| Base part | 24 MHz | 115200 | 8N1 | `echo`, `led`, `stats`, `blink` |
 | Variant 5 | 24 MHz | 19200 | 8N1 | `bin <n>` |
 
 ## Repository layout
 
 ```
 lab02_Hutsul/
-├── task1/            minimal UART echo program (step 5 of the assignment), 115200 8N1
+├── task1/            minimal UART echo program, 115200 8N1
 ├── task2/            command-line console: help/ping/info/uptime/reboot + echo/led/stats/blink, 115200 8N1
 ├── task3/            variant 5: UART reconfigured to 19200 8N1, new command bin <n>
 │   ├── lab2.cywrk
 │   └── lab2.cydsn/   lab2.cyprj, lab2.cydwr, TopDesign/TopDesign.cysch, main.c
-├── images/           screenshots used in this report
+├── images/           screenshots used in this report (PSoC Creator, terminal, Saleae Logic 2)
 ├── Lab2_Hutsul_report.pdf   full lab report submitted to the teacher (Ukrainian)
 ├── .gitignore        build output and generated code are not committed
 └── README.md         this report
@@ -37,35 +37,35 @@ lab02_Hutsul/
 ## How to run
 
 1. Open `taskN/lab2.cywrk` in PSoC Creator 4.4 and press **Build → Build lab2** (`Shift+F6`).
-2. Connect the CY8CKIT-042 kit over USB and press **Debug → Program** (`Ctrl+F5`).
+2. Connect the CY8CKIT-042 kit over USB (J10) and press **Debug → Program** (`Ctrl+F5`).
    On the CY8CKIT-042 the KitProg USB-UART bridge is **not** routed to the PSoC 4 on the PCB:
    connect it with two jumper wires, `J8_10` (KitProg TX) → `J3_10` (P4[0], PSoC RX) and
    `J8_9` (KitProg RX) → `J3_09` (P4[1], PSoC TX).
 3. Find the *KitProg USB-UART* COM port in Device Manager and open a terminal
-   (Tera Term / PuTTY): **115200** for task1/task2 or **19200** for task3, 8 data bits, no parity,
+   (PuTTY / Tera Term): **115200** for task1/task2 or **19200** for task3, 8 data bits, no parity,
    1 stop bit, no flow control, Enter sends CR, local echo off (the board echoes the characters).
 4. Press the reset button: the board prints `=== Lab_2 UART console ===`, then type `help`.
-5. For the measurements connect the Saleae Logic analyzer: D4 → P4_1 (TX of the PSoC),
-   D5 → P4_0 (RX of the PSoC), D6 → P0_2 (`Pin_LED_R`), D7 → P0_3 (`Pin_LED_G`), GND → GND.
+5. Saleae Logic channels used for the measurements: D4 → P4_1 (TX of the PSoC), D5 → P4_0 (RX of the PSoC),
+   D6 → P0_3 (`Pin_LED_G`), D7 → P0_2 (`Pin_LED_R`), GND → GND.
 
 ---
 
-## Task 1 – Project preparation and clock check
+## Task 1 – Project preparation, component configuration and basic test
 
 The lab1 project was copied to `lab2` (project files renamed, generated folders removed), all lab1
 components were deleted from the schematic and the clock tree was set to **IMO = 24 MHz**.
-In the CY8C4245 (PSoC 4200) the HFCLK has no divider, so `HFCLK = SysClk (BUS CLK) = 24 MHz`.
+In the CY8C4245 (PSoC 4200) the HFCLK has no divider, so `HFCLK = SysClk = 24 MHz`.
 
 ![Clocks tab](images/cydwr_clocks_115200.png)
 
 *Figure 1 – Clocks tab of lab2.cydwr: IMO 24 MHz, SysClk 24 MHz, UART_1_SCBCLK divider 17*
 
-## Task 2 – UART component
+A `UART (SCB mode) v4.0` component named `UART_1` and three `Digital Output Pin` components
+`Pin_LED_R`, `Pin_LED_G`, `Pin_LED_B` were placed (pins: Strong drive, initial state **High (1)** because
+the on-board LEDs are active low, HW connection disabled).
 
-A `UART (SCB mode) v4.0` component named `UART_1` was placed with the following settings:
-
-| Parameter | Value |
-|-----------|-------|
+| UART_1 parameter | Value |
+|------------------|-------|
 | Mode / Direction | Standard / TX + RX |
 | Baud rate | 115200 (task1, task2) · 19200 (task3) |
 | Data bits / Parity / Stop bits | 8 / None / 1 |
@@ -73,18 +73,6 @@ A `UART (SCB mode) v4.0` component named `UART_1` was placed with the following 
 | Interrupt | Internal |
 | RX / TX buffer size | 64 / 64 bytes |
 | Flow control | disabled |
-
-**SCB clock for 115200 bit/s**
-
-```
-SCB clock = baud · OVS = 115200 · 12 = 1 382 400 Hz
-divider   = IMO / SCB clock = 24 000 000 / 1 382 400 = 17.36 → 17 (integer peripheral divider)
-SCB clock actual = 24 000 000 / 17 = 1 411 765 Hz
-baud actual      = 1 411 765 / 12 = 117 647 bit/s      error = +2.12 %
-```
-
-PSoC Creator reports exactly these values: *Actual baud rate 117647* in the customizer and
-*UART_1_SCBCLK: desired 1.382 MHz, nominal 1.412 MHz, divider 17* in the Clocks tab.
 
 ![UART Basic tab](images/uart_basic_115200.png)
 
@@ -94,17 +82,20 @@ PSoC Creator reports exactly these values: *Actual baud rate 117647* in the cust
 
 *Figure 3 – UART Advanced tab: internal interrupt, 64-byte RX and TX buffers*
 
-## Task 3 – LED pins and schematic
-
-Three `Digital Output Pin` components `Pin_LED_R`, `Pin_LED_G`, `Pin_LED_B`: Strong drive,
-initial drive state **High (1)** (the on-board LEDs are active low, so they start switched off),
-HW connection disabled.
-
 ![Schematic](images/schematic.png)
 
 *Figure 4 – Schematic of lab2.cydsn*
 
-## Task 4 – Pin assignment
+**SCB clock for 115200 bit/s**
+
+```
+SCB clock = baud · OVS = 115200 · 12 = 1 382 400 Hz
+divider   = IMO / SCB clock = 24 000 000 / 1 382 400 = 17.36 → 17 (integer peripheral divider)
+baud actual = 24 000 000 / (17 · 12) = 117 647 bit/s      error = +2.12 %
+```
+
+PSoC Creator reports exactly these values: *Actual baud rate 117647* in the customizer and
+*UART_1_SCBCLK: desired 1.382 MHz, nominal 1.412 MHz, divider 17* in the Clocks tab.
 
 | Signal | Port | Pin | Purpose |
 |--------|:----:|:---:|---------|
@@ -124,7 +115,7 @@ die of the RGB LED, so `led r` physically lights green, `led g` blue and `led b`
 
 *Figure 5 – Pin assignment in lab2.cydwr*
 
-## Task 5 – First run: minimal echo program (`task1`)
+Minimal program (`task1`) that checks the path PC → KitProg → PSoC → PC:
 
 ```c
 int main(void)
@@ -143,21 +134,22 @@ int main(void)
 }
 ```
 
-The project builds without errors or warnings. After programming, pressing reset prints
-`=== Lab_2 UART ===` in the terminal and every typed character is echoed back.
-
 ![Build output](images/build_output.png)
 
 *Figure 6 – Build result (0 errors, 0 warnings)*
 
-## Task 6 – Command-line console (`task2`)
+![Terminal echo](images/terminal_echo.png)
+
+*Figure 7 – PuTTY: greeting after reset and echo of the typed characters*
+
+## Task 2 – Command-line console (CLI) and new commands (`task2`)
 
 The console skeleton works as follows: `SysTickTick()` increments `uptimeMs` every millisecond,
 the main loop drains the UART RX buffer into `ProcessChar()`, which echoes characters, handles
 Backspace and collects a line; on Enter `ExecuteLine()` splits the line into `argv[]`, looks `argv[0]`
 up in `commandTable[]` and calls the handler (returns 1 on success, 0 on a user error).
 
-Commands added in step 6.3:
+Added commands:
 
 | Command | Behaviour | Reply |
 |---------|-----------|-------|
@@ -169,9 +161,10 @@ Commands added in step 6.3:
 `BlinkService()` is called from the main loop and toggles a LED when `(int32)(uptimeMs - blinkNextMs[i]) >= 0`,
 then advances `blinkNextMs[i]` by the interval – the comparison stays correct after the counter wraps around.
 
-Expected terminal session:
+Terminal session on the board (Figure 8):
 
 ```
+> uptime              63660 ms
 > foo                 ERR unknown command, type help   (not in commandTable, cmdErrCount++)
 > echo hello world    hello world
 > led r on            OK
@@ -181,8 +174,15 @@ Expected terminal session:
 > blink g 500         OK   (channel G LED toggles every 500 ms, period 1 s)
 > blink g off         OK
 > blink g 5           ERR usage: blink <r|g|b> <10..60000 ms|off>  (below the 10 ms limit)
-> stats               rx bytes: N / cmd ok: 7 / cmd err: 4 / line overflow: 0
+> stats               rx bytes: 124 / cmd ok: 9 / cmd err: 4 / line overflow: 0
 ```
+
+The 9 successful commands are `help`, `ping`, `info`, `uptime`, `echo`, `led r on`, `led all off`,
+`blink g 500`, `blink g off`; the 4 failed ones are `foo`, `led x on`, `led r`, `blink g 5`.
+
+![Console session](images/terminal_console.png)
+
+*Figure 8 – Basic and added console commands tested on the board*
 
 **Where is the ISR used?** There is no explicit `CY_ISR` in `main.c`, but two interrupts work in the
 background: the internal ISR of `UART_1` moves received bytes from the hardware FIFO into the 64-byte
@@ -193,50 +193,126 @@ immediately), and `SysTickTick()` is called from the SysTick interrupt every 1 m
 iteration: echo and command replies would be delayed by up to 0.5 s, fast input of more than 64 bytes
 would overflow the RX buffer, and several LEDs with different periods could not be blinked independently.
 
-## Task 7–9 – Saleae Logic measurements and failure experiments
+## Task 3 – UART decoding and timing measurements in Saleae Logic
 
-Two *Async Serial* analyzers (115200, 8 bits, 1 stop, no parity, LSB first) are attached to D4 and D5.
-For `ping` the PC line (D5) carries `70 69 6E 67 0D`, the board line (D4) carries the echo,
-`0D 0A`, `pong`, `0D 0A` and the prompt `> `.
+Two *Async Serial* analyzers (115200, 8 bits, 1 stop, no parity, LSB first) are attached to D4 and D5,
+trigger – falling edge on D5. For `ping` the PC line (D5) carries `70 69 6E 67 0D`, the board line (D4)
+carries the echo, `0D 0A`, `pong`, `0D 0A` and the prompt `> `.
 
-Expected values for 115200 bit/s:
+![Ping decoding](images/logic_ping_decode.png)
 
-| Parameter | Calculated | IDE actual | Saleae |
-|-----------|:----------:|:----------:|:------:|
-| T_bit | 8.68 µs | 8.50 µs (117647 bit/s) | *measured on the board* |
-| Baud | 115200 | 117647 | *measured on the board* |
-| Echo delay | – | – | *measured on the board* |
-| `ping` response delay | – | – | *measured on the board* |
-| Duration of `pong\r\n` | 6 · 10 · 8.68 = 520.8 µs | 510 µs | *measured on the board* |
-| `led r on` → D6 | – | – | *measured on the board* |
-| Blink period (`blink g 500`) | 1000 ms | 1000 ms (SysTick from the 24 MHz IMO, ±2 %) | *measured on the board* |
+*Figure 9 – Decoding of the `ping` exchange (D4 – TX of the board, D5 – RX of the board)*
 
-Failure experiments (described, to be captured on the board):
+**3.1 Bit duration and baud rate.** `echo UUUU` (`U` = 0x55 alternates 0/1). Logic 2 shows a bit width of
+8.5 µs, a period of 17 µs (58.824 kHz) and 1/width = 117.647 kHz:
+`baud = 1 / 8.5 µs ≈ 117 647 bit/s`, `+2.12 %` from 115200 – exactly the actual rate of the integer divider 17.
 
-* **Wrong baud rate (57600 in the terminal):** garbage or nothing in the terminal; the analyzer set to
-  115200 decodes only the board line correctly, set to 57600 only the PC line – both sides are "right"
-  for their own speed, they are simply not matched.
-* **Even parity in the terminal:** the board sees the parity bit where it expects the stop bit
-  (frame errors), the terminal reports parity errors on the board's replies; the problem is on the
-  terminal side.
-* **Fast stream (10 lines of `ping` pasted at once):** 50 bytes fit into the 64-byte RX buffer, but the
-  140 bytes of replies exceed the 64-byte TX buffer, so `UART_1_UartPutString()` waits for free space and
-  the main loop slows down; with longer pastes the RX buffer can overflow (`lineOverflowCount` grows).
+![Bit duration 115200](images/logic_tbit_115200.png)
 
-## Task 10 – Variant 5: 19200 bit/s, 8N1, command `bin <n>` (`task3`)
+*Figure 10 – Bit duration on D4*
+
+**3.2 Echo delay.** The end of the stop bit has no edge, so the marker is placed on the last rising edge of
+the frame on D5 (start of the stop bit) and one PC bit (1 / 115200 = 8.68 µs) is subtracted:
+`18.70 − 8.68 ≈ 10.0 µs`. During this time the UART ISR moves the byte into the RX buffer, the main loop
+reads it, `ProcessChar()` puts the echo into the TX buffer and the SCB starts the start bit.
+
+![Echo delay](images/logic_echo_delay.png)
+
+*Figure 11 – Echo delay*
+
+**3.3 `ping` response delay.** From the start of the stop bit of `0x0D` on D5 to the first reply byte on D4:
+`19.48 − 8.68 ≈ 10.8 µs` – only 0.8 µs longer than the echo, because `ProcessChar()` queues `\r\n`
+immediately on CR and parses the line while these bytes are being sent (no gap between `0x0A` and `0x70`).
+
+![Ping delay](images/logic_ping_delay.png)
+
+*Figure 12 – Delay of the reply to `ping`*
+
+**3.4 Duration of `pong\r\n`.** 6 bytes × 10 bits. The markers show 505.97 µs, but the end marker sits in the
+middle of the stop bit of the second `0x0A`, half a bit (≈ 4.3 µs) before the next byte `0x3E`, so the full
+duration is ≈ 510 µs = `6 · 10 · 8.50 µs` (actual rate); with the nominal 115200 it would be 520.8 µs.
+
+![pong duration](images/logic_pong_duration.png)
+
+*Figure 13 – Duration of the reply `pong\r\n` on D4*
+
+**3.5 LED control delay.** After `led r on` the channel R LED (P0[2], on D7) turns on with a falling edge
+≈ 44.4 µs after the start of the stop bit of `0x0D` on D5 (read from the time scale, ±1 µs), i.e.
+`44.4 − 8.68 ≈ 35.7 µs`. The reply `\r\n` on D4 starts already after 15.3 µs; the LED edge comes ≈ 29 µs later
+because `ExecuteLine()` tokenizes the line, finds `led` in the table, `CmdLed()` checks the arguments and
+`LedSet()` drives the pin.
+
+![LED delay](images/logic_led_delay.png)
+
+*Figure 14 – From the end of `led r on` to the reply and the LED edge (D7)*
+
+**3.6 Blink accuracy.** `blink g 500`: the period on D6 between two falling edges is 1.000082 s =
+1000.08 ms (+0.008 %); SysTick runs from SysClk = IMO = 24 MHz, far better than the ±2 % IMO tolerance.
+
+![Blink period](images/logic_blink_period.png)
+
+*Figure 15 – Blink period*
+
+| Parameter (115200 bit/s) | Calculated | Saleae | Difference |
+|--------------------------|:----------:|:------:|:----------:|
+| T_bit, µs | 8.68 (8.50 actual) | 8.50 | −0.18 (−2.1 %) |
+| Baud, bit/s | 115200 (117647 actual) | 117 647 | +2447 (+2.12 %) |
+| Echo delay, µs | – | ≈ 10.0 (18.70 − 8.68) | – |
+| `ping` response delay, µs | – | ≈ 10.8 (19.48 − 8.68) | – |
+| Duration of `pong\r\n`, µs | 6 · 86.8 = 520.8 | ≈ 510 (505.97 + ½ stop bit) | −10.8 (−2.1 %) vs 520.8; ≈ 0 vs 510 |
+| `led r on` → D7, µs | – | ≈ 35.7 (44.4 − 8.68) | – |
+| Blink period, ms | 1000 | 1000.08 | +0.08 (+0.008 %) |
+
+## Task 4 – Failure experiments
+
+**1. Wrong baud rate (57600 in the terminal, board at 115200).** With the analyzers at 115200, the PC bytes on
+D5 decode as `0x78`, `0x60`, `0x1E`, `0xFE`, partly with framing errors. The board echoes only the printable
+ones (`0x78` "x", `0x60` "`") – `ProcessChar()` accepts 0x20…0x7E only – and the terminal at 57600 shows them
+as garbage. The CR is corrupted too, so the line never ends and `ping` is not executed (no `pong` on D4).
+Each side transmits correctly for its own speed; the speeds simply do not match.
+
+![Wrong baud](images/logic_wrong_baud.png)
+
+*Figure 16 – Terminal at 57600 bit/s, analyzers at 115200 bit/s*
+
+**2. Even parity in the terminal.** Everything kept working: `ping` was answered and Saleae with 8N1 decodes
+both lines without errors. The KitProg USB-UART bridge supports only 8 data bits without parity
+(CY8CKIT-042 Kit Guide, table 3-2), so it ignores the parity setting and still sends 8N1 frames. A real parity
+mismatch can only be shown by setting Parity = Even in `UART_1` or with a separate USB-UART adapter.
+
+![Even parity](images/logic_even_parity.png)
+
+*Figure 17 – Signals with Even parity selected in the terminal*
+
+**3. Fast stream.** Several `ping` lines pasted at once give a continuous stream of 40 bytes on D5
+(8 commands × 5 bytes). The board starts answering while still receiving; every command produces 14 reply
+bytes (echo, `\r\n`, `pong\r\n`, `> `), 112 bytes in total (≈ 9.5 ms at 117 647 bit/s vs ≈ 3.5 ms of input).
+The 64-byte RX buffer holds all input, the 64-byte TX buffer fills up so `UART_1_UartPutString()` waits and
+the main loop slows down, but the `pong` replies on D4 follow each other without gaps. Longer pastes can
+overflow the RX buffer (`lineOverflowCount` grows).
+
+![Fast stream](images/logic_fast_stream.png)
+
+*Figure 18 – Several `ping` commands pasted at once*
+
+## Task 5 – Variant 5: 19200 bit/s, 8N1, command `bin <n>` (`task3`)
+
+![UART Basic 19200](images/uart_basic_19200.png)
+
+*Figure 19 – UART Basic tab for variant 5 (actual baud rate 19231)*
+
+![Clocks 19200](images/cydwr_clocks_19200.png)
+
+*Figure 20 – Clocks tab: UART_1_SCBCLK 230.769 kHz, divider 104*
 
 ```
 SCB clock = 19200 · 12 = 230 400 Hz
 divider   = 24 000 000 / 230 400 = 104.17 → 104
-SCB clock actual = 24 000 000 / 104 = 230 769 Hz
-baud actual      = 230 769 / 12 = 19 231 bit/s        error = +0.16 %
+baud actual = 24 000 000 / (104 · 12) = 19 231 bit/s        error = +0.16 %
 
-bits per byte = 1 start + 8 data + 0 parity + 1 stop = 10
 T_bit  = 1 / 19200 = 52.08 µs   (actual 52.00 µs)
 T_byte = 10 · 52.08 = 520.8 µs  (actual 520.0 µs)
 ```
-
-Error of the baud rate for different oversampling values (IMO = 24 MHz):
 
 | Baud | OVS | SCB clock | Divider | Actual baud | Error |
 |:----:|:---:|:---------:|:-------:|:-----------:|:-----:|
@@ -249,14 +325,6 @@ Error of the baud rate for different oversampling values (IMO = 24 MHz):
 
 For 19200 bit/s all three OVS values give the same 0.16 % error, so OVS = 12 is kept; for 115200 bit/s
 OVS = 8 or 16 would be a better choice than the default 12.
-
-![UART Basic 19200](images/uart_basic_19200.png)
-
-*Figure 7 – UART Basic tab for variant 5 (actual baud rate 19231)*
-
-![Clocks 19200](images/cydwr_clocks_19200.png)
-
-*Figure 8 – Clocks tab: UART_1_SCBCLK 230.4 kHz → 230.769 kHz, divider 104*
 
 ### Command `bin <n>`
 
@@ -291,7 +359,11 @@ static uint8 CmdBin(uint8 argc, char *argv[])
 }
 ```
 
-Terminal session examples:
+![Build output 19200](images/build_output_19200.png)
+
+*Figure 21 – Build result for variant 5*
+
+Terminal session on the board:
 
 ```
 > bin 10              1010
@@ -302,23 +374,48 @@ Terminal session examples:
 > bin 12a             ERR usage: bin <n>        (not a decimal digit)
 > bin 1 2             ERR usage: bin <n>        (too many arguments)
 > bin 4294967296      ERR usage: bin <n>        (uint32 overflow in ParseU32)
+> help                ... bin - bin <n> - number in binary
 ```
 
-Expected duration of the reply to `bin 10` (`1010\r\n`, 6 bytes): `6 · 10 · 52.08 µs = 3.125 ms`.
+![bin session](images/terminal_bin.png)
 
-![Build output 19200](images/build_output_19200.png)
+*Figure 22 – Command `bin <n>` with correct and wrong input*
 
-*Figure 9 – Build result for variant 5*
+Measurements repeated at 19200 bit/s:
+
+* bit duration on D4 – **51.96 µs**, i.e. **19 246 bit/s** (+0.24 % from 19200, +0.08 % from the actual 19 231);
+* reply `1010\r\n` to `bin 10`, from the start bit of the first `0x31` to the start bit of the next `0x3E` –
+  **3.116 ms** (calculated `6 · 10 · 52.08 µs = 3.125 ms`, actual 3.12 ms).
+
+![Bit duration 19200](images/logic_tbit_19200.png)
+
+*Figure 23 – Bit duration at 19200 bit/s*
+
+![bin 10 duration](images/logic_bin10_duration.png)
+
+*Figure 24 – Duration of the reply to `bin 10`*
+
+| Parameter | Calculated | IDE actual | Measured (Saleae) |
+|-----------|:----------:|:----------:|:-----------------:|
+| Baud (115200) | 115200 | 117647 | 117 647 |
+| T_bit (115200), µs | 8.68 | 8.50 | 8.50 |
+| Duration of `pong\r\n`, µs | 520.8 | 510 | ≈ 510 |
+| Blink period `blink g 500`, ms | 1000 | 1000 | 1000.08 |
+| Baud (19200) | 19200 | 19231 | 19 246 |
+| T_bit (19200), µs | 52.08 | 52.00 | 51.96 |
+| Duration of the reply to `bin 10`, ms | 3.125 | 3.12 | 3.116 |
 
 ## Conclusions
 
 * The SCB UART was configured in PSoC Creator; for 115200 bit/s the integer divider 17 gives an actual
   rate of 117 647 bit/s (+2.12 %), for the variant speed 19200 bit/s the divider 104 gives 19 231 bit/s
-  (+0.16 %) – both values match the ones reported by the customizer and the Clocks tab.
+  (+0.16 %) – both values match the customizer, the Clocks tab and the Saleae measurements
+  (T_bit = 8.5 µs and 51.96 µs).
 * A command-line console with a command table was implemented; `echo`, `led`, `stats` and a
   non-blocking `blink` based on SysTick were added, and for variant 5 the command `bin <n>` with full
-  input validation.
-* Comparing oversampling factors showed that for 115200 bit/s OVS 8 or 16 reduce the baud-rate error
+  input validation. All three projects build without errors or warnings and were tested on the board.
+* Measured on the CY8CKIT-042: echo delay ≈ 10 µs, `ping` reply delay ≈ 10.8 µs, the LED turns on ≈ 36 µs
+  after the command, the blink period is 1000.08 ms.
+* With mismatched baud rates the data are corrupted on both sides; the parity setting is ignored by the
+  KitProg bridge, which supports 8N1 only. For 115200 bit/s OVS 8 or 16 would reduce the baud-rate error
   from 2.12 % to 0.16 %.
-* All three projects build without errors or warnings; the Saleae Logic measurements (bit duration,
-  echo/response latency, blink period) are performed on the CY8CKIT-042 kit.
